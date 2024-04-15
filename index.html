@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Color Test Experiment</title>
+<style>
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        font-size: 24px;
+    }
+    .color-text {
+        font-size: 40px;
+        font-weight: bold;
+    }
+</style>
+</head>
+<body>
+<div>
+    <p id="instructionText">Enter your participant ID and press Enter to start the experiment.</p>
+
+    <input type="text" id="participantIdInput" placeholder="Enter Participant ID" autofocus>
+    <div id="colorText" class="color-text"></div>
+    <!-- Audio elements -->
+    <audio id="redSound" src="red.wav" preload="auto"></audio>
+    <audio id="greenSound" src="green.wav" preload="auto"></audio>
+    <audio id="blueSound" src="blue.wav" preload="auto"></audio>
+    <audio id="yellowSound" src="yellow.wav" preload="auto"></audio>
+</div>
+<script>
+    const colors = ['red', 'green', 'blue', 'yellow'];
+    const keyMap = { '1': 'red', '2': 'green', '3': 'blue', '4': 'yellow' };
+    const totalTrials = 65; // 20 initial practice trials and 45 experimental trials
+    const practiceTrials = 20;
+    let currentTrial = 0;
+
+    let isExperimentRunning = false;
+
+    let isTransition = false;
+    let participantId = null;
+    let startTime, endTime; // Track response time
+    let experimentData = []; // Array to store trial data
+
+    // notifyTransition();
+
+
+	document.addEventListener('DOMContentLoaded', function() {
+	    const participantInput = document.getElementById('participantIdInput');
+	    participantInput.addEventListener('keypress', function(event) {
+	        if (event.key === "Enter" && participantInput.value.trim() !== "") {
+	            participantId = participantInput.value.trim(); // Store the participant ID
+	            participantInput.style.display = 'none'; // Hide input field
+	            document.getElementById('instructionText').textContent = 'Press the spacebar to start the experiment.';
+	            isExperimentRunning = true;
+	            notifyTransition(); // Notify to start the practice
+	            event.preventDefault();
+	        }
+	    });
+	});
+
+
+	document.addEventListener('keydown', function(event) {
+		if (!isExperimentRunning) {
+			return;
+		}
+	    if (event.code === 'Space' && isTransition) {
+            conintueExperiment();
+	        event.preventDefault();
+	    } else if (!isTransition && ['1', '2', '3', '4'].includes(event.key)) {
+	        endTime = performance.now(); // Mark response time
+	        handleResponse(event.key);
+	    }
+	});
+
+	function conintueExperiment() {
+        document.querySelector('p').textContent = '';
+        isTransition = false;
+        nextTrial();
+	}
+
+	function nextTrial() {
+	    if (currentTrial < totalTrials) {
+	    	currentTrial++;
+	        displayColorText();
+	        startTime = performance.now(); // Start timing
+	    } else {
+	        endExperiment();
+	    }
+	}
+
+    function notifyTransition() {
+        document.querySelector('#colorText').textContent = '';
+        if (currentTrial == 0) {
+        	document.querySelector('p').textContent = 'The practice consists of 20 trials. Press the spacebar to start.';
+        }
+        else {
+        	document.querySelector('p').textContent = 'The practice ends. The actual experiment is about to begin. Please press the spacebar to continue.';
+        }
+        isTransition = true;
+    }
+
+    function endExperiment() {
+        document.querySelector('#colorText').textContent = '';
+        document.querySelector('p').textContent = 'Experiment completed. Thank you!';
+        isExperimentRunning = false;
+        console.log(experimentData); // Display collected data in console
+
+        fetch('https://sheet.best/api/sheets/09cdec79-f893-4be2-98c7-a493158959e2', {
+            method: 'POST', // Set method to POST
+            headers: {
+                'Content-Type': 'application/json' // Set content type to JSON
+            },
+            body: JSON.stringify(experimentData) // Convert the JavaScript object to a JSON string
+        })
+        .then(response => response.json()) // Parsing the JSON response
+        .then(data => {
+            console.log('Success:', data); // Handle success
+        })
+        .catch((error) => {
+            console.error('Error:', error); // Handle errors
+        });
+
+    }
+
+    function displayColorText() {
+        const text = colors[Math.floor(Math.random() * colors.length)];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const sound = colors[Math.floor(Math.random() * colors.length)];
+        document.getElementById('colorText').textContent = text;
+        document.getElementById('colorText').style.color = color;
+        playSound(sound);
+        experimentData.push({ participantId, currentTrial, text, displayColor: color, sound, response: null, responseTimeMs: null, correctness: null, trialType: currentTrial <= practiceTrials ? 'practice' : 'experimental' });
+    }
+
+    function playSound(color) {
+        const sound = document.getElementById(`${color}Sound`);
+        sound.currentTime = 0; // Reset playback position to start
+        sound.play();
+    }
+
+	function handleResponse(key) {
+        const trial = experimentData[currentTrial - 1];
+        trial.response = keyMap[key];
+        trial.responseTimeMs = endTime - startTime; // Calculate response time in milliseconds
+        trial.correctness = (trial.displayColor === keyMap[key]); // Evaluate correctness
+        console.log(`You pressed ${key}, which corresponds to ${keyMap[key]}`);
+        if (currentTrial === practiceTrials) {
+            // Notify transition right after the 20th trial
+            notifyTransition();
+            return; // Return here prevents incrementing currentTrial prematurely
+        }
+        nextTrial();
+	}
+</script>
+</body>
+</html>
