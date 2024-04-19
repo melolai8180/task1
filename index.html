@@ -32,8 +32,8 @@
 <script>
     const colors = ['red', 'green', 'blue', 'yellow'];
     const keyMap = { '1': 'red', '2': 'green', '3': 'blue', '4': 'yellow' };
-    const totalTrials = 65; // 20 initial practice trials and 45 experimental trials
-    const practiceTrials = 20;
+    const totalTrials = 77; // 20 initial practice trials and 45 experimental trials
+    const practiceTrials = 32;
     let currentTrial = 0;
 
     let isExperimentRunning = false;
@@ -93,10 +93,10 @@
     function notifyTransition() {
         document.querySelector('#colorText').textContent = '';
         if (currentTrial == 0) {
-        	document.querySelector('p').textContent = 'The practice consists of 20 trials. Press the spacebar to start.';
+        	document.querySelector('p').textContent = `The practice consists of ${practiceTrials} trials. Press the spacebar to start.`;
         }
         else {
-        	document.querySelector('p').textContent = 'The practice ends. The actual experiment is about to begin. Please press the spacebar to continue.';
+        	document.querySelector('p').textContent = `The practice ends. The actual experiment consists of ${totalTrials - practiceTrials} and is about to begin. Please press the spacebar to continue.`;
         }
         isTransition = true;
     }
@@ -125,9 +125,20 @@
     }
 
     function displayColorText() {
-        const text = colors[Math.floor(Math.random() * colors.length)];
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        const sound = colors[Math.floor(Math.random() * colors.length)];
+        let text;
+        let color;
+        let sound;
+        if (currentTrial <= 12) {
+            text =  colors[(currentTrial - 1) % 4];
+            color = colors[(currentTrial - 1) % 4];
+            sound = colors[(currentTrial - 1) % 4];
+        }
+        else {
+            text = colors[Math.floor(Math.random() * colors.length)];
+            color = colors[Math.floor(Math.random() * colors.length)];
+            sound = colors[Math.floor(Math.random() * colors.length)];
+        }
+
         document.getElementById('colorText').textContent = text;
         document.getElementById('colorText').style.color = color;
         playSound(sound);
@@ -156,3 +167,4 @@
 </script>
 </body>
 </html>
+
